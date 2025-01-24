@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario de Productos</title>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .section {
+            margin: 20px 0;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .section table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .section table th, .section table td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .section button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .section button:hover {
+            background-color: #45a049;
+        }
+
+        .chart {
+            width: 100%;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Inventario de Productos</h1>
+
+        <!-- Tabla de Datos Ingresados -->
+        <div class="section">
+            <h2>Datos Ingresados</h2>
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Los datos se agregarán dinámicamente aquí -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="grid">
+            <!-- Agregar Datos -->
+            <div class="section">
+                <h2>Agregar Datos</h2>
+                <label for="product">Producto:</label>
+                <input type="text" id="product" placeholder="Ingrese un producto">
+                <br>
+                <label for="quantity">Cantidad:</label>
+                <input type="number" id="quantity" placeholder="Ingrese una cantidad numérica">
+                <br><br>
+                <button onclick="addData()">Agregar</button>
+            </div>
+
+            <!-- Cargar Archivo CSV -->
+            <div class="section">
+                <h2>Archivo CSV</h2>
+                <input type="file" id="csvFile" accept=".csv">
+                <button onclick="loadCSV()">Cargar Archivo</button>
+            </div>
+
+            <!-- Subir Archivo SQL -->
+            <div class="section">
+                <h2>Cargar desde Archivo SQL</h2>
+                <input type="file" id="sqlFile" accept=".sql">
+                <button onclick="loadSQL()">Cargar Archivo</button>
+            </div>
+        </div>
+
+        <!-- Gráfico Circular -->
+        <div class="section">
+            <h2>Cantidad de Productos</h2>
+            <div id="piechart" class="chart"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        google.charts.load('current', { packages: ['corechart'] });
+        google.charts.setOnLoadCallback(drawChart);
+
+        let data = [
+            ['Producto', 'Cantidad']
+        ];
+
+        function drawChart() {
+            const dataTable = google.visualization.arrayToDataTable(data);
+
+            const options = {
+                title: 'Cantidad de Productos',
+                is3D: true,
+                backgroundColor: '#f5f5f5'
+            };
+
+            const chart = new google.visualization.PieChart(document.getElementById('piechart'));
+            chart.draw(dataTable, options);
+        }
+
+        function addData() {
+            const product = document.getElementById('product').value;
+            const quantity = parseInt(document.getElementById('quantity').value);
+
+            if (product && quantity > 0) {
+                // Agregar datos al array principal
+                data.push([product, quantity]);
+
+                // Actualizar la tabla
+                const tbody = document.querySelector('#dataTable tbody');
+                const row = document.createElement('tr');
+                const productCell = document.createElement('td');
+                const quantityCell = document.createElement('td');
+
+                productCell.textContent = product;
+                quantityCell.textContent = quantity;
+                row.appendChild(productCell);
+                row.appendChild(quantityCell);
+
+                tbody.appendChild(row);
+
+                // Redibujar el gráfico
+                drawChart();
+
+                // Limpiar los campos de entrada
+                document.getElementById('product').value = '';
+                document.getElementById('quantity').value = '';
+            } else {
+                alert('Por favor, ingrese un producto y una cantidad válida.');
+            }
+        }
+
+        function loadCSV() {
+            const fileInput = document.getElementById('csvFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Por favor, selecciona un archivo CSV.');
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const lines = e.target.result.split('\n').filter(line => line.trim() !== "");
+                lines.forEach(line => {
+                    const [product, quantity] = line.split(',');
+                    if (product && !isNaN(quantity)) {
+                        const quantityNumber = parseInt(quantity.trim());
+                        data.push([product.trim(), quantityNumber]);
+
+                        const tbody = document.querySelector('#dataTable tbody');
+                        const row = document.createElement('tr');
+                        const productCell = document.createElement('td');
+                        const quantityCell = document.createElement('td');
+
+                        productCell.textContent = product.trim();
+                        quantityCell.textContent = quantityNumber;
+                        row.appendChild(productCell);
+                        row.appendChild(quantityCell);
+
+                        tbody.appendChild(row);
+                    }
+                });
+                drawChart();
+            };
+
+            reader.readAsText(file);
+        }
+
+        function loadSQL() {
+            const fileInput = document.getElementById('sqlFile');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const sqlContent = e.target.result;
+
+                    // Extraer valores de las consultas INSERT
+                    const insertRegex = /INSERT INTO\s+\w+\s+\(([^)]+)\)\s+VALUES\s+\(([^)]+)\)/gi;
+                    let match;
+                    while ((match = insertRegex.exec(sqlContent)) !== null) {
+                        const columns = match[1].split(',').map(col => col.trim().replace(/['`]/g, ''));
+                        const values = match[2].split(',').map(val => val.trim().replace(/['`]/g, ''));
+
+                        const productIndex = columns.indexOf('Producto');
+                        const quantityIndex = columns.indexOf('Cantidad');
+
+                        if (productIndex !== -1 && quantityIndex !== -1) {
+                            const product = values[productIndex];
+                            const quantity = parseInt(values[quantityIndex]);
+
+                            if (product && !isNaN(quantity)) {
+                                data.push([product, quantity]);
+
+                                const tbody = document.querySelector('#dataTable tbody');
+                                const row = document.createElement('tr');
+                                const productCell = document.createElement('td');
+                                const quantityCell = document.createElement('td');
+
+                                productCell.textContent = product;
+                                quantityCell.textContent = quantity;
+                                row.appendChild(productCell);
+                                row.appendChild(quantityCell);
+
+                                tbody.appendChild(row);
+                            }
+                        }
+                    }
+
+                    drawChart();
+                };
+                reader.readAsText(file);
+            }
+        }
+    </script>
+</body>
+</html>
